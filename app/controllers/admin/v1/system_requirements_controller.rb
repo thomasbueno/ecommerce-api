@@ -11,6 +11,13 @@ module Admin::V1
       save_system_requirement!
     end
 
+    def update
+      @system_requirement = SystemRequirement.find(params[:id])
+      @system_requirement.attributes = system_requirement_params
+
+      save_system_requirement!
+    end
+
     private
 
     def system_requirement_params
