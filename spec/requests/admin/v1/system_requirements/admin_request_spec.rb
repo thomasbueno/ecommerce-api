@@ -1,6 +1,6 @@
 require 'rails_helper'
 
-RSpec.describe "Admin::V1::SystemRequirements", type: :request do
+RSpec.describe "Admin::V1::SystemRequirements as :admin", type: :request do
   let(:user) { create(:user) }
 
   context "GET /system_requirements" do
