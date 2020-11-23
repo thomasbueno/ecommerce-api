@@ -92,7 +92,7 @@ RSpec.describe "Admin::V1::Coupons as :admin", type: :request do
         { coupon: attributes_for(:coupon, code: nil) }.to_json
       end
 
-      it "doesn't update system requirement" do
+      it "doesn't update coupon" do
         old_code = coupon.code
         patch url, headers: auth_header(user), params: coupon_invalid_params
         coupon.reload
