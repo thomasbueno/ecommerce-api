@@ -1,5 +1,7 @@
 module Admin::V1
   class UsersController < ApiController
+    before_action :load_user, only: %i(update)
+
     def index
       @users = User.all
     end
@@ -11,7 +13,17 @@ module Admin::V1
       save_user!
     end
 
+    def update
+      @user.attributes = user_params
+
+      save_user!
+    end
+
     private
+
+    def load_user
+      @user = User.find(params[:id])
+    end
 
     def user_params
       return {} unless params.key?(:user)
