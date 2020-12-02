@@ -5,16 +5,88 @@ RSpec.describe "Admin::V1::SystemRequirements as :admin", type: :request do
 
   context "GET /system_requirements" do
     let(:url) { "/admin/v1/system_requirements" }
-    let!(:system_requirements) { create_list(:system_requirement, 5) }
+    let!(:system_requirements) { create_list(:system_requirement, 10) }
 
-    it "returns all system requirements" do
-      get url, headers: auth_header(user)
-      expect(body_json['system_requirements']).to contain_exactly *system_requirements.as_json
+    context "without any params" do
+      it "returns 10 system requirements" do
+        get url, headers: auth_header(user)
+        expect(body_json['system_requirements'].count).to eq 10
+      end
+
+      it "returns 10 first system requirements" do
+        get url, headers: auth_header(user)
+        expected_system_requirements = system_requirements[0..9].as_json
+        expect(body_json['system_requirements']).to contain_exactly *expected_system_requirements
+      end
+
+      it "return success status" do
+        get url, headers: auth_header(user)
+        expect(response).to have_http_status(:ok)
+      end
     end
 
-    it "returns success status" do
-      get url, headers: auth_header(user)
-      expect(response).to have_http_status(:ok)
+    context "with search[name] param" do
+      let!(:search_name_system_requirements) do
+        system_requirements = []
+        15.times { |n| system_requirements << create(:system_requirement, name: "Search #{n + 1}") }
+        system_requirements
+      end
+
+      let(:search_params) { {search: {name: "Search"}} }
+
+      it "returns only searched system requirements limited by default pagination" do
+        get url, headers: auth_header(user), params: search_params
+
+        expected_system_requirements = search_name_system_requirements[0..9].map do |system_requirement|
+          system_requirement.as_json
+        end
+
+        expect(body_json['system_requirements']).to contain_exactly *expected_system_requirements
+      end
+
+      it "return success status" do
+        get url, headers: auth_header(user), params: search_params
+        expect(response).to have_http_status(:ok)
+      end
+    end
+
+    context "with pagination params" do
+      let(:page) { 2 }
+      let(:length) { 5 }
+
+      let(:pagination_params) { {page: page, length: length} }
+
+      it "returns records sized by :length" do
+        get url, headers: auth_header(user), params: pagination_params
+        expect(body_json['system_requirements'].count).to eq length
+      end
+
+      it "returns system requirements limited by pagination" do
+        get url, headers: auth_header(user), params: pagination_params
+        expected_system_requirements = system_requirements[5..9].as_json
+        expect(body_json['system_requirements']).to contain_exactly *expected_system_requirements
+      end
+
+      it "return success status" do
+        get url, headers: auth_header(user), params: pagination_params
+        expect(response).to have_http_status(:ok)
+      end
+    end
+
+    context "with order params" do
+      let(:order_params) { { order: {name: 'desc'} } }
+
+      it "returns ordered system requirements limited by default pagination" do
+        get url, headers: auth_header(user), params: order_params
+        system_requirements.sort! { |a, b| b[:name] <=> a[:name] }
+        expected_system_requirements = system_requirements[0..9].as_json
+        expect(body_json['system_requirements']).to contain_exactly *expected_system_requirements
+      end
+
+      it "return success status" do
+        get url, headers: auth_header(user), params: order_params
+        expect(response).to have_http_status(:ok)
+      end
     end
   end
 
