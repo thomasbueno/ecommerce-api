@@ -18,6 +18,14 @@ RSpec.describe 'Admin::V1::Users as :client', type: :request do
     include_examples 'forbidden access'
   end
 
+  context "GET /users/:id" do
+    let(:url) { "/admin/v1/users/#{user.id}" }
+    let!(:user) { create(:user, profile: 1) }
+
+    before(:each) { get url, headers: auth_header(user) }
+    include_examples "forbidden access"
+  end
+
   context 'PATCH  /users/:id' do
     let(:client_user) { create(:user) }
     let(:url) { "/admin/v1/users/#{client_user.id}" }
