@@ -65,6 +65,22 @@ RSpec.describe "Admin::V1::Coupons as :admin", type: :request do
     end
   end
 
+  context "GET /coupons/:id" do
+    let(:coupon) { create(:coupon) }
+    let(:url) { "/admin/v1/coupons/#{coupon.id}" }
+
+    it "returns requested category" do
+      get url, headers: auth_header(user)
+      expected_coupon = coupon.as_json(only: %i(id code status discount_value due_date))
+      expect(body_json['coupon']).to eq expected_coupon
+    end
+
+    it "returns success status" do
+      get url, headers: auth_header(user)
+      expect(response).to have_http_status(:ok)
+    end
+  end
+
   context "PATCH /coupons/:id" do
     let(:coupon) { create(:coupon) }
     let(:url) { "/admin/v1/coupons/#{coupon.id}" }
