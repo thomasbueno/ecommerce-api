@@ -137,6 +137,22 @@ RSpec.describe "Admin::V1::SystemRequirements as :admin", type: :request do
     end
   end
 
+  context "GET /system_requirements/:id" do
+    let(:system_requirement) { create(:system_requirement) }
+    let(:url) { "/admin/v1/system_requirements/#{system_requirement.id}" }
+
+    it "returns requested category" do
+      get url, headers: auth_header(user)
+      expected_system_requirement = system_requirement.as_json(only: %i(id name operational_system storage processor memory video_board))
+      expect(body_json['system_requirement']).to eq expected_system_requirement
+    end
+
+    it "returns success status" do
+      get url, headers: auth_header(user)
+      expect(response).to have_http_status(:ok)
+    end
+  end
+
   context "PATCH /system_requirements/:id" do
     let(:system_requirement) { create(:system_requirement) }
     let(:url) { "/admin/v1/system_requirements/#{system_requirement.id}" }
