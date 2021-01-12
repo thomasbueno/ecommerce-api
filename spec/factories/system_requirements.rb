@@ -5,6 +5,6 @@ FactoryBot.define do
     storage { "90 GB" }
     processor { "Intel i5 9400F" }
     memory { "16 GB" }
-    video_board { "Geforce RTX 2060 Super" }
+    video_board { "N/A" }
   end
 end
