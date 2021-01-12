@@ -12,4 +12,5 @@ RSpec.describe License, type: :model do
   it { is_expected.to define_enum_for(:status).with_values({ available: 1, in_use: 2, inactive: 3 }) }
 
   it_behaves_like "paginatable concern", :license
+  it_has_behavior_of "like searchable concern", :license, :key
 end
