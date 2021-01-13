@@ -9,6 +9,9 @@ Rails.application.routes.draw do
       resources :coupons
       resources :users
       resources :products
+      resources :games, only: [], shallow: true do
+        resources :licenses
+      end
     end
   end
 
