@@ -1,64 +1,150 @@
 require 'rails_helper'
 
-RSpec.describe "Admin::V1::Coupons as :admin", type: :request do
+RSpec.describe "Admin V1 Coupons as :admin", type: :request do
   let(:user) { create(:user) }
 
   context "GET /coupons" do
     let(:url) { "/admin/v1/coupons" }
-    let!(:coupons) { create_list(:coupon, 5) }
+    let!(:coupons) { create_list(:coupon, 10) }
+    
+    context "without any params" do
+      it "returns 10 coupons" do
+        get url, headers: auth_header(user)
+        expect(body_json['coupons'].count).to eq 10
+      end
+      
+      it "returns 10 first Coupons" do
+        get url, headers: auth_header(user)
+        expected_coupons = coupons[0..9].as_json(only: %i(id code status discount_value due_date))
+        expect(body_json['coupons']).to contain_exactly *expected_coupons
+      end
 
-    it "returns all coupons" do
-      get url, headers: auth_header(user)
-      expect(body_json['coupons']).to contain_exactly *coupons.as_json
+      it "returns success status" do
+        get url, headers: auth_header(user)
+        expect(response).to have_http_status(:ok)
+      end
+
+      it_behaves_like 'pagination meta attributes', { page: 1, length: 10, total: 10, total_pages: 1 } do
+        before { get url, headers: auth_header(user) }
+      end
     end
 
-    it "returns success status" do
-      get url, headers: auth_header(user)
-      expect(response).to have_http_status(:ok)
+    context "with search[code] param" do
+      let!(:search_code_coupons) do
+        coupons = [] 
+        15.times { |n| coupons << create(:coupon, code: "Search #{n + 1}") }
+        coupons 
+      end
+
+      let(:search_params) { { search: { code: "Search" } } }
+
+      it "returns only searched coupons limited by default pagination" do
+        get url, headers: auth_header(user), params: search_params
+        expected_coupons = search_code_coupons[0..9].map do |coupon|
+          coupon.as_json(only: %i(id code status discount_value due_date))
+        end
+        expect(body_json['coupons']).to contain_exactly *expected_coupons
+      end
+
+      it "returns success status" do
+        get url, headers: auth_header(user), params: search_params
+        expect(response).to have_http_status(:ok)
+      end
+
+      it_behaves_like 'pagination meta attributes', { page: 1, length: 10, total: 15, total_pages: 2 } do
+        before { get url, headers: auth_header(user), params: search_params }
+      end
+    end
+
+    context "with pagination params" do
+      let(:page) { 2 }
+      let(:length) { 5 }
+
+      let(:pagination_params) { { page: page, length: length } }
+
+      it "returns records sized by :length" do
+        get url, headers: auth_header(user), params: pagination_params
+        expect(body_json['coupons'].count).to eq length
+      end
+      
+      it "returns coupons limited by pagination" do
+        get url, headers: auth_header(user), params: pagination_params
+        expected_coupons = coupons[5..9].as_json(only: %i(id code status discount_value due_date))
+        expect(body_json['coupons']).to contain_exactly *expected_coupons
+      end
+
+      it "returns success status" do
+        get url, headers: auth_header(user), params: pagination_params
+        expect(response).to have_http_status(:ok)
+      end
+
+      it_behaves_like 'pagination meta attributes', { page: 2, length: 5, total: 10, total_pages: 2 } do
+        before { get url, headers: auth_header(user), params: pagination_params }
+      end
+    end
+
+    context "with order params" do
+      let(:order_params) { { order: { code: 'desc' } } }
+
+      it "returns ordered coupons limited by default pagination" do
+        get url, headers: auth_header(user), params: order_params
+        coupons.sort! { |a, b| b[:code] <=> a[:code]}
+        expected_coupons = coupons[0..9].as_json(only: %i(id code status discount_value due_date))
+        expect(body_json['coupons']).to contain_exactly *expected_coupons
+      end
+ 
+      it "returns success status" do
+        get url, headers: auth_header(user), params: order_params
+        expect(response).to have_http_status(:ok)
+      end
+
+      it_behaves_like 'pagination meta attributes', { page: 1, length: 10, total: 10, total_pages: 1 } do
+        before { get url, headers: auth_header(user), params: order_params }
+      end
     end
   end
 
   context "POST /coupons" do
     let(:url) { "/admin/v1/coupons" }
-
+    
     context "with valid params" do
-      let(:coupon_params) { {coupon: attributes_for(:coupon)}.to_json }
+      let(:coupon_params) { { coupon: attributes_for(:coupon) }.to_json }
 
-      it "adds a new coupon" do
+      it 'adds a new Coupon' do
         expect do
           post url, headers: auth_header(user), params: coupon_params
         end.to change(Coupon, :count).by(1)
       end
 
-      it "returns last added coupon" do
+      it 'returns last added Coupon' do
         post url, headers: auth_header(user), params: coupon_params
         expected_coupon = Coupon.last.as_json(only: %i(id code status discount_value due_date))
         expect(body_json['coupon']).to eq expected_coupon
       end
 
-      it "returns success status" do
+      it 'returns success status' do
         post url, headers: auth_header(user), params: coupon_params
         expect(response).to have_http_status(:ok)
       end
     end
 
     context "with invalid params" do
-      let(:coupon_invalid_params) do
+      let(:coupon_invalid_params) do 
         { coupon: attributes_for(:coupon, code: nil) }.to_json
       end
 
-      it "doesn't add a new coupon" do
+      it 'does not add a new Coupon' do
         expect do
           post url, headers: auth_header(user), params: coupon_invalid_params
         end.to_not change(Coupon, :count)
       end
 
-      it "returns error messages" do
+      it 'returns error message' do
         post url, headers: auth_header(user), params: coupon_invalid_params
         expect(body_json['errors']['fields']).to have_key('code')
       end
 
-      it "returns unprocessable_entity status" do
+      it 'returns unprocessable_entity status' do
         post url, headers: auth_header(user), params: coupon_invalid_params
         expect(response).to have_http_status(:unprocessable_entity)
       end
@@ -69,7 +155,7 @@ RSpec.describe "Admin::V1::Coupons as :admin", type: :request do
     let(:coupon) { create(:coupon) }
     let(:url) { "/admin/v1/coupons/#{coupon.id}" }
 
-    it "returns requested category" do
+    it "returns requested Coupon" do
       get url, headers: auth_header(user)
       expected_coupon = coupon.as_json(only: %i(id code status discount_value due_date))
       expect(body_json['coupon']).to eq expected_coupon
@@ -86,41 +172,46 @@ RSpec.describe "Admin::V1::Coupons as :admin", type: :request do
     let(:url) { "/admin/v1/coupons/#{coupon.id}" }
 
     context "with valid params" do
-      let(:new_code) { "My new coupon" }
-      let(:coupon_params) { {coupon: {code: new_code}}.to_json }
+      let(:new_code) { 'My new Coupon' }
+      let(:coupon_params) { { coupon: { code: new_code } }.to_json }
 
-      it "updates coupon" do
+      it 'updates Coupon' do
         patch url, headers: auth_header(user), params: coupon_params
         coupon.reload
+        expect(coupon.code).to eq new_code
+      end
 
+      it 'returns updated Coupon' do
+        patch url, headers: auth_header(user), params: coupon_params
+        coupon.reload
         expected_coupon = coupon.as_json(only: %i(id code status discount_value due_date))
         expect(body_json['coupon']).to eq expected_coupon
       end
 
-      it "return success status" do
+      it 'returns success status' do
         patch url, headers: auth_header(user), params: coupon_params
         expect(response).to have_http_status(:ok)
       end
     end
 
     context "with invalid params" do
-      let(:coupon_invalid_params) do
+      let(:coupon_invalid_params) do 
         { coupon: attributes_for(:coupon, code: nil) }.to_json
       end
 
-      it "doesn't update coupon" do
+      it 'does not update Coupon' do
         old_code = coupon.code
         patch url, headers: auth_header(user), params: coupon_invalid_params
         coupon.reload
         expect(coupon.code).to eq old_code
       end
 
-      it "returns error messages" do
+      it 'returns error message' do
         patch url, headers: auth_header(user), params: coupon_invalid_params
         expect(body_json['errors']['fields']).to have_key('code')
       end
 
-      it "returns unprocessable_entity status" do
+      it 'returns unprocessable_entity status' do
         patch url, headers: auth_header(user), params: coupon_invalid_params
         expect(response).to have_http_status(:unprocessable_entity)
       end
@@ -131,18 +222,18 @@ RSpec.describe "Admin::V1::Coupons as :admin", type: :request do
     let!(:coupon) { create(:coupon) }
     let(:url) { "/admin/v1/coupons/#{coupon.id}" }
 
-    it "removes coupon" do
-      expect do
-      delete url, headers: auth_header(user)  
+    it 'removes Coupon' do
+      expect do  
+        delete url, headers: auth_header(user)
       end.to change(Coupon, :count).by(-1)
     end
 
-    it "return no_content status" do
+    it 'returns success status' do
       delete url, headers: auth_header(user)
       expect(response).to have_http_status(:no_content)
     end
-  
-    it "doesn't return any body content" do
+
+    it 'does not return any body content' do
       delete url, headers: auth_header(user)
       expect(body_json).to_not be_present
     end
