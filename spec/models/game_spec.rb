@@ -7,4 +7,6 @@ RSpec.describe Game, type: :model do
   it { is_expected.to validate_presence_of(:developer) }
   it { is_expected.to belong_to :system_requirement }
   it { is_expected.to have_one :product }
+
+  it_has_behavior_of "like searchable concern", :game, :developer
 end
