@@ -3,7 +3,7 @@ Rails.application.routes.draw do
  
   namespace :admin do
     namespace :v1 do
-      get "home" => "home#index"
+      resources :home, only: %i(index)
       resources :categories
       resources :system_requirements
       resources :coupons
@@ -17,7 +17,7 @@ Rails.application.routes.draw do
 
   namespace :storefront do
     namespace :v1 do
-
+      resources :home, only: %i(index)
     end
   end
 end
